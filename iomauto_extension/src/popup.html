@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Автоматическое решение Интерактивных Образовательных Модулей (ИОМ)</title>
+    <style>
+        h4 {
+            margin-top: 0;
+        }
+
+        body {
+            width: 250px;
+            padding: 10px;
+            font-family: Arial, sans-serif;
+        }
+
+        .form-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input {
+            padding: 5px;
+            font-size: 14px;
+            width: 45%;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background-color: #ffb01a;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button.startButton {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        h4 {
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .hide {
+            display: none;
+        }
+
+        .flex-container {
+            flex-direction: row;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        #handleOutSettings {
+            margin-right: 6px;
+        }
+    </style>
+</head>
+<body>
+<div class="hide" id="settingsBlock">
+    <div class="flex-container">
+        <img id="handleOutSettings" src="../images/arrow-back-outline.256x224.png" height="22" width="26" alt=""/>
+        <h4>Введите интервал (в секундах) в пределах которого будут подставляться ответы, по умолчанию 4-8 секунд</h4>
+
+    </div>
+    <div class="form-container">
+        <label for="minValue"></label><input type="text" id="minValue" placeholder="4"/>
+        <label for="maxValue"></label><input type="text" id="maxValue" placeholder="8"/>
+    </div>
+    <button id="handleSave">Сохранить</button>
+</div>
+
+<div id="workBlock">
+    <div class="flex-container">
+        <div id="status"><h4>Ожидание...</h4></div>
+        <img id="handleSettings" src="../images/settings.256x256.png" height="24" width="24" alt="settings"/>
+    </div>
+
+    <button class="startButton" id="handleStart">Старт</button>
+</div>
+
+
+<script src="popup.js"></script>
+</body>
+</html>

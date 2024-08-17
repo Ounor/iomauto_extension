@@ -158,9 +158,8 @@ async function searchAnswers(certName, linkToAnswers = undefined) {
     //   query: certName,
     //   // credentials: "include"
     // }).toString())).text()
-    const anchorAllMap = {}
-    // const anchorAll = []
-    // const anchorAllTitles = []
+    const anchorAll = []
+    const anchorAllTitles = []
     let anchor
     let anchorIndex
     let prevSearch = certName
@@ -189,20 +188,14 @@ async function searchAnswers(certName, linkToAnswers = undefined) {
         console.log('Найдены темы в базе данных:')
         anchors.forEach((findLink, index) => {
           const linkTitle = findLink.getAttribute('title').trim()
-          // anchorAll.push(findLink)
-          // anchorAllTitles.push(linkTitle)
-          const hasAlreadyThisName = anchorAllMap[linkTitle]
-          if (!hasAlreadyThisName) {
-            // берем всегда первое полное совпадение, а то бывает 2 теста одинаково называются
-            // к примеру "Профилактика онкологических заболеваний"
-            anchorAllMap[linkTitle] = findLink
-            console.log((index + 1) + ') ' + linkTitle)
+          anchorAll.push(findLink)
+          anchorAllTitles.push(linkTitle)
+          console.log((index + 1) + ') ' + linkTitle)
 
-            // так как мы обрезаем поиск то тут нужно более точно уже искать совпадение
-            if (linkTitle.indexOf(certNameFinal) >= 0) {
-              foundLinks.push(findLink)
-              anchorIndex = Object.keys(anchorAllMap).length
-            }
+          // так как мы обрезаем поиск то тут нужно более точно уже искать совпадение
+          if (linkTitle.indexOf(certNameFinal) >= 0) {
+            foundLinks.push(findLink)
+            anchorIndex = anchorAll.length
           }
         })
       } else {
@@ -229,7 +222,6 @@ async function searchAnswers(certName, linkToAnswers = undefined) {
     }
 
     // если было несколько вариантов или не найден
-    const anchorAllTitles = Object.keys(anchorAllMap)
     if (!anchor && anchorAllTitles.length) {
       const userChoice = prompt(
         anchorAllTitles
@@ -239,7 +231,7 @@ async function searchAnswers(certName, linkToAnswers = undefined) {
       )
 
       if (userChoice) {
-        anchor = anchorAllMap[anchorAllTitles[parseInt(userChoice, 10) - 1]]
+        anchor = anchorAll[parseInt(userChoice, 10) - 1]
       }
     }
 
@@ -263,22 +255,6 @@ async function searchAnswers(certName, linkToAnswers = undefined) {
 
 
 
-function compareAnswer(inputDataStr, pageStr) {
-  // могут быть не заглавные, могут быть запятые лишние в конце
-  // поэтому обрежем в конце
-  // return inputDataStr.match(pageStr.substr(0, pageStr.length - 1))
-  // return inputDataStr.match(pageStr)
-  // return pageStr.indexOf(inputDataStr) >= 0
-
-  // return pageStr.replaceAll(/[\.\;\+]+$/g, '') === inputDataStr
-  // нормализация
-
-  // Была маленькая буква
-  // Профилактика онкологических заболеваний
-  // начинать скрининг при среднестатистическом риске рака толстой кишки необходимо с возраста
-  return pageStr.replaceAll(/[, \.\;\)\+]/g, '').toLocaleLowerCase() === inputDataStr.replaceAll(/[, \.\;\)\+]/g, '').toLowerCase()
-}
-
 function startExecute(mapResult) {
   // todo ограничение на 10000
   // const input =  window.prompt('JSON c ответами')
@@ -287,7 +263,17 @@ function startExecute(mapResult) {
   const allKeys = Object.keys(mapResult)
   console.log(mapResult)
 
+  function compare(inputDataStr, pageStr) {
+    // могут быть не заглавные, могут быть запятые лишние в конце
+    // поэтому обрежем в конце
+    // return inputDataStr.match(pageStr.substr(0, pageStr.length - 1))
+    // return inputDataStr.match(pageStr)
+    // return pageStr.indexOf(inputDataStr) >= 0
 
+    // return pageStr.replaceAll(/[\.\;\+]+$/g, '') === inputDataStr
+    // нормализация
+    return pageStr.replaceAll(/[, \.\;\)\+]/g, '') === inputDataStr.replaceAll(/[, \.\;\)\+]/g, '')
+  }
 
 
   let intervalTimerId
@@ -314,164 +300,143 @@ function startExecute(mapResult) {
 
       if (prevQuestion !== question) {
         // todo @ANKU @LOW - так как таймер 2000 результат может не успеть поставится и запускается поврно
-        log('Вопрос ' + pageQuestionNumber + ': ', question)
+        console.log('Вопрос ' + pageQuestionNumber + ': ', question[0], question[1])
       }
 
-      let findAnswers
-      const foundKey = allKeys.find((key) => compareAnswer(key, question))
+      const foundKey = allKeys.find((key) => compare(key, question))
+
+
       if (foundKey) {
-        findAnswers = mapResult[foundKey]
+        const findAnswers = mapResult[foundKey]
         // console.log('Найдены ответы: ', findAnswers)
-        log(findAnswers[0], findAnswers[1])
-      } else {
-        logError('Не найден вопрос в ответах: ' + question, '\n', mapResult)
-      }
+        console.log(findAnswers)
 
+        let randomPageAnswers = []
 
-      let hasAnyAnswer = false
-      const pageAnswersMap = {
-        // заголовок - ссылка на span
-      }
-
-      const testAnswer = (el, checkedClassName) => {
-        const isChecked = el.className.indexOf(checkedClassName) >= 0
-        // подходит как для множества так и для одно элемента
-        const spanEl = el.querySelector('span')
-        const answerFromPage = spanEl.textContent
-
-        pageAnswersMap[answerFromPage] = spanEl
-
-        if (isChecked) {
+        let hasAnyAnswer = false
+        /*
+          В ответах сразу два одинаковых вопроса, просто варианты выбора разные.
+          Сделали multiple решение - массив массивов:
+          [
+             ["ответ 1", "ответ 2"],
+             ["ответ 4"],
+          ]
+        */
+        // todo @ANKU @LOW - на сайте нету болдов с ответами, поэтому делаем хак просто оставляем без ответа
+        if (findAnswers.length === 0) {
+          logError(
+            'ОШИБКА! На сайте нету правильного ответа на вопрос\n',
+            foundKey,
+          )
           hasAnyAnswer = true
-          return true
         } else {
-          /*
-            В ответах сразу два одинаковых вопроса, просто варианты выбора разные.
-            Сделали multiple решение - массив массивов:
-            [
-               ["ответ 1", "ответ 2"],
-               ["ответ 4"],
-            ]
-            */
-          const result = findAnswers?.some((answersVariant, variantIndex) => {
-            return answersVariant.some((answer) => {
-              if (compareAnswer(answer, answerFromPage)) {
-                hasAnyAnswer = true
-                spanEl.click()
-                return true
+          findAnswers.some((answersVariant, variantIndex) => {
+            answersVariant.forEach((answer) => {
+              // нужно каждый раз искать, так как форма обновляется после проставление ответа
+              const answersEls = document.querySelectorAll('mat-checkbox')
+              if (answersEls.length > 0) {
+                // НЕСКОЛЬКО ОТВЕТОВ
+                randomPageAnswers = [
+                  answersEls[0]?.querySelector('span'),
+                  answersEls[1]?.querySelector('span')
+                ]
+                answersEls.forEach((checkboxEl) => {
+                  const isChecked = checkboxEl.className.indexOf('mat-mdc-checkbox-checked') >= 0
+                  const checboxSpanEl = checkboxEl.querySelector('span')
+                  if (isChecked) {
+                    hasAnyAnswer = true
+                  } else if (compare(answer, checboxSpanEl.textContent)) {
+                    hasAnyAnswer = true
+                    checboxSpanEl.click()
+                  }
+                })
+              } else {
+                // ОДИН ОТВЕТ
+                const radioEls = document.querySelectorAll('mat-radio-button')
+                randomPageAnswers = radioEls[0] ? [
+                  radioEls[0]?.querySelector('span'),
+                ] : []
+                radioEls.forEach((radioEl) => {
+                  const isChecked = radioEl.className.indexOf('mat-mdc-radio-checked') >= 0
+                  const checboxSpanEl = radioEl.querySelector('span')
+                  if (isChecked) {
+                    hasAnyAnswer = true
+                  } else if (compare(answer, checboxSpanEl.textContent)) {
+                    hasAnyAnswer = true
+                    checboxSpanEl.click()
+                  }
+                })
               }
             })
-            // if (hasAnyAnswer) {
-            //   // если нашли ответы прекращаем вариантов блоков ответов перебирать
-            //   return true
-            // } else if (variantIndex < findAnswers.length - 1) {
-            //   log('Пробуем подставить другой блок ответов:\n', findAnswers[variantIndex + 1])
-            // }
-          })
 
-          hasAnyAnswer = hasAnyAnswer || result
-          return result
-        }
-      }
-
-      // нужно каждый раз искать, так как форма обновляется после проставление ответа
-      const answersEls = document.querySelectorAll('mat-checkbox')
-      const isMultiple = answersEls.length > 0
-      if (answersEls.length > 0) {
-        // НЕСКОЛЬКО ОТВЕТОВ
-        answersEls.forEach((checkboxEl, index) => {
-          testAnswer(checkboxEl, 'mat-mdc-checkbox-checked')
-        })
-      } else {
-        // ОДИН ОТВЕТ
-        const radioEls = document.querySelectorAll('mat-radio-button')
-        radioEls.forEach((radioEl, index) => {
-          testAnswer(radioEl, 'mat-mdc-radio-checked')
-        })
-      }
-
-      if (!hasAnyAnswer) {
-        const manualAnswers = prompt(
-          'На вопрос:\n' + question
-          + '\nне найден ответы. Выберите сами '
-          + (isMultiple ? 'НЕСКОЛЬКО (через пробел) номеров ответов' : 'ОДИН номер ответ') + ':\n\n'
-          + Object.keys(pageAnswersMap).map((qu, index) => `${index + 1}) ${qu}`).join('\n'),
-          // default
-          isMultiple ? '1 2' : '1',
-        )
-
-        if (manualAnswers) {
-          manualAnswers
-            .split(' ')
-            .forEach((manualIndexPlus) => {
-              // todo @ANKU @LOW - нужно последовательно через паузу запуска клики
-              Object.keys(pageAnswersMap).forEach((title, index) => {
-                if (index === (manualIndexPlus - 1)) {
-                  pageAnswersMap[title].click()
-                  hasAnyAnswer = true
-                }
-              })
-            })
-        }
-      }
-
-      if (!hasAnyAnswer) {
-        stopProcess('НЕ найден ответ на вопрос.', question, findAnswers)
-        debugger
-      } else {
-        // ЖМЕМ кнопку ДАЛЬШЕ
-
-        //const buttonApplyEl = document.querySelector('#questionAnchor > div > lib-question > mat-card > div > mat-card-actions > div > button.question-buttons-primary.mdc-button.mdc-button--raised.mat-mdc-raised-button.mat-primary.mat-mdc-button-base.ng-star-inserted')
-        const buttonApplyEl = document.querySelector('mat-card-actions button.question-buttons-primary.mdc-button.mat-primary')
-
-        if (intervalTimerId && buttonApplyEl.textContent === 'Завершить тестирование') {
-          stopProcess();
-          console.log('КОНЕЦ. ПРОЙДЕНО ' + pageQuestionNumber + 'ответов.')
-        } else {
-          //buttonApplyEl.click()
-          //pageQuestionNumber += 1
-
-          setTimeout(() => {
-            buttonApplyEl.click()
-
-            if (prevQuestion !== question) {
-              pageQuestionNumber += 1
+            if (hasAnyAnswer) {
+              // если нашли ответы прекращаем вариантов блоков ответов перебирать
+              return true
+            } else if (variantIndex < findAnswers.length - 1) {
+              log('Пробуем подставить другой блок ответов:\n', findAnswers[variantIndex + 1])
             }
-            prevQuestion = question
-          }, 300)
+          })
         }
+
+
+        // todo @ANKU @LOW - добавить варнинг икоку
+        // todo @ANKU @LOW - @hack - делаем хак, что если не найдены ответы, выберем первый вариант, чтобы продолжить
+        if (!hasAnyAnswer) {
+          logError(
+            'ОШИБКА! НЕ найден ответ на вопрос\n',
+            foundKey,
+          )
+          if (randomPageAnswers.length > 0) {
+            randomPageAnswers.forEach((randomAnswer) => randomAnswer?.click())
+            hasAnyAnswer = true
+          }
+        }
+
+        if (!hasAnyAnswer) {
+          stopProcess('НЕ найден ответ на вопрос. ВЫБЕРИТЕ ответы сами', question, findAnswers)
+          debugger
+        } else {
+          //const buttonApplyEl = document.querySelector('#questionAnchor > div > lib-question > mat-card > div > mat-card-actions > div > button.question-buttons-primary.mdc-button.mdc-button--raised.mat-mdc-raised-button.mat-primary.mat-mdc-button-base.ng-star-inserted')
+          const buttonApplyEl = document.querySelector('mat-card-actions button.question-buttons-primary.mdc-button.mat-primary')
+
+          if (intervalTimerId && buttonApplyEl.textContent === 'Завершить тестирование') {
+            stopProcess();
+            console.log('КОНЕЦ. ПРОЙДЕНО ' + pageQuestionNumber + 'ответов.')
+          } else {
+            //buttonApplyEl.click()
+            //pageQuestionNumber += 1
+
+            setTimeout(() => {
+              buttonApplyEl.click()
+
+              if (prevQuestion !== question) {
+                pageQuestionNumber += 1
+              }
+              prevQuestion = question
+            }, 300)
+          }
+        }
+      } else {
+        stopProcess('Не найден вопрос в ответах: ' + question, '\n', mapResult)
+        debugger
       }
     } catch (e) {
       stopProcess('ОШИБКА исполнения', e)
       debugger
     }
 
+    // Очистка текущего интервала
+    clearInterval(intervalTimerId);
+
+    const rand = Math.floor(Math.random() * (44000 - 13000 + 1)) + 13000
+    // Установка нового интервала с обновленным временем
+    intervalTimerId = setInterval(checkAnswer, rand);
   }
 
-  // todo @ANKU @CRIT @MAIN - по таймеру а у нас ручной ввод и упирается в ожидании - нужно переделать на промис последовательные
-  intervalTimerId = setInterval(checkAnswer, 2000)
+// Изначальная установка интервала
+  intervalTimerId = setInterval(checkAnswer, Math.floor(Math.random() * (44000 - 13000 + 1)) + 13000);
 
-  // setTimeout(checkAnwser, 1500)
-  // setTimeout(checkAnwser, 3000)
-  // setTimeout(checkAnwser, 4500)
-  // setTimeout(checkAnwser, 6000)
-
-  //checkAnwser()
 }
-
-// function runManual() {
-//   startExecute(finalMapResult)
-// }
-//
-// async function run(linkToAnswers = undefined) {
-//   await searchByCertName(linkToAnswers)
-//   runManual()
-// }
-
-// run()
-// run('link')
-
-
 
 
 

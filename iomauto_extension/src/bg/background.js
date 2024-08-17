@@ -116,6 +116,7 @@ chrome.action.onClicked.addListener((tab) => {
     moduleStatus,
     error,
   }) => {
+    console.log('onStart')
     console.log('bg: action: ', moduleStatus, error)
     switch (moduleStatus) {
       case MODULE_STATUS.ERROR:
@@ -164,13 +165,21 @@ chrome.storage.sync.onChanged.addListener(async (changes) => {
 //   })
 // })
 
+
 chrome.runtime.onMessage.addListener(function (runtimeMessage, sender, callback) {
   const {
     url,
     type,
     data,
+    action
   } = runtimeMessage
   console.log('runtime.onMessage: ', runtimeMessage)
+
+  if (action === "onStart") {
+    console.log(123123)
+
+  }
+
 
   if (url) {
     fetch(url, data)
