@@ -44,50 +44,50 @@ function answersParsing(doc = document) {
     throw new Error('ОШИБКА - не найдены ответы в интернете')
   } else {
     rowEls[0].childNodes
-      .forEach((item, index) => {
-        if (item.nodeName === 'H3') {
-          // todo убрать номер вопроса
-          question = item.textContent.replaceAll(/^\d+\. /g, '')
-        } else if (question && item.nodeName === 'P' && item.childNodes.length > 0) {
-          const answers = []
+        .forEach((item, index) => {
+          if (item.nodeName === 'H3') {
+            // todo убрать номер вопроса
+            question = item.textContent.replaceAll(/^\d+\. /g, '')
+          } else if (question && item.nodeName === 'P' && item.childNodes.length > 0) {
+            const answers = []
 
-          item.querySelectorAll('strong').forEach((aItem) => {
-            if (aItem) {
-              answers.push(aItem.textContent
-                // убрать 1) и + в конце и кавычки в начале и в конце
-                .replaceAll(/^"/g, '')
-                .replaceAll(/^\d+\) /g, '')
-                .replaceAll(/[\.\;\+"]+$/g, '')
-              )
+            item.querySelectorAll('strong').forEach((aItem) => {
+              if (aItem) {
+                answers.push(aItem.textContent
+                    // убрать 1) и + в конце и кавычки в начале и в конце
+                    .replaceAll(/^"/g, '')
+                    .replaceAll(/^\d+\) /g, '')
+                    .replaceAll(/[\.\;\+"]+$/g, '')
+                )
+              }
+            })
+            // // HACK выбираем первый ответ
+            // // todo может не быть ответов жирным не выделено)
+            // if (answers.length === 0) {
+            //   answers.push(
+            //     item.childNodes[0].textContent
+            //       .replaceAll(/^\d+\) /g, '')
+            //       .replaceAll(/[\.\;\+]+$/g, '')
+            //   )
+            // }
+
+            // одинаковые вопросы есть с разными вариантами
+            // mapResult[question] = answers
+
+            if (!mapResult[question]) {
+              mapResult[question] = []
             }
-          })
-          // // HACK выбираем первый ответ
-          // // todo может не быть ответов жирным не выделено)
-          // if (answers.length === 0) {
-          //   answers.push(
-          //     item.childNodes[0].textContent
-          //       .replaceAll(/^\d+\) /g, '')
-          //       .replaceAll(/[\.\;\+]+$/g, '')
-          //   )
-          // }
-
-          // одинаковые вопросы есть с разными вариантами
-          // mapResult[question] = answers
-
-          if (!mapResult[question]) {
-            mapResult[question] = []
+            /*
+              В ответах сразу два одинаковых вопроса, просто варианты выбора разные.
+              Сделай multiple решение:
+              [
+                 ["ответ 1", "ответ 2"],
+                 ["ответ 4"],
+              ]
+            */
+            mapResult[question].push(answers)
           }
-          /*
-            В ответах сразу два одинаковых вопроса, просто варианты выбора разные.
-            Сделай multiple решение:
-            [
-               ["ответ 1", "ответ 2"],
-               ["ответ 4"],
-            ]
-          */
-          mapResult[question].push(answers)
-        }
-      })
+        })
   }
 
   console.log(mapResult)
@@ -105,24 +105,24 @@ function answersParsing(doc = document) {
 async function fetchFromExtension(url) {
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage(
-      {
-        url,
-      },
-      ([okData, error]) => {
-        // response.text().then((responseText) => {
-        //   resolve(responseText)
-        // })
-        if (okData) {
-          const {
-            body,
-            status,
-            statusText,
-          } = okData
-          resolve(body)
-        } else {
-          reject(error)
-        }
-      },
+        {
+          url,
+        },
+        ([okData, error]) => {
+          // response.text().then((responseText) => {
+          //   resolve(responseText)
+          // })
+          if (okData) {
+            const {
+              body,
+              status,
+              statusText,
+            } = okData
+            resolve(body)
+          } else {
+            reject(error)
+          }
+        },
     )
   })
 }
@@ -136,17 +136,17 @@ const SEARCH_MATCHES = [
   // Недержание мочи (по утвержденным клиническим рекомендациям)-2020
   // Недержание мочи (по клиническим рекомендациям)
   (searchTerm, prevTerm) => prevTerm.replaceAll(
-    'по утвержденным клиническим рекомендациям',
-    'по клиническим рекомендациям',
+      'по утвержденным клиническим рекомендациям',
+      'по клиническим рекомендациям',
   ),
 
   // 3) "Взрослые" в ответах, а в вопросе уже нет
   // Доброкачественная гиперплазия предстательной железы (по утвержденным клиническим рекомендациям) - 2024
   // Доброкачественная гиперплазия предстательной железы. Взрослые (по утвержденным клиническим рекомендациям) - 2024
   (searchTerm) => searchTerm
-    .substring(0, 45)
-    // обрезаем последнее слово, так как оно может быть неполным
-    .replaceAll(/\W(\w+)$/gi, ''),
+      .substring(0, 45)
+      // обрезаем последнее слово, так как оно может быть неполным
+      .replaceAll(/\W(\w+)$/gi, ''),
 ]
 
 async function searchAnswers(certName, linkToAnswers = undefined) {
@@ -232,10 +232,10 @@ async function searchAnswers(certName, linkToAnswers = undefined) {
     const anchorAllTitles = Object.keys(anchorAllMap)
     if (!anchor && anchorAllTitles.length) {
       const userChoice = prompt(
-        anchorAllTitles
-          .map((title, index) => `${index + 1}) ${title}`)
-          .join('\n'),
-        `${(anchorIndex || 0) + 1}`,
+          anchorAllTitles
+              .map((title, index) => `${index + 1}) ${title}`)
+              .join('\n'),
+          `${(anchorIndex || 0) + 1}`,
       )
 
       if (userChoice) {
@@ -310,7 +310,7 @@ function startExecute(mapResult) {
   function checkAnswer() {
     try {
       const question = document.querySelector('#questionAnchor > div > lib-question > mat-card > div > mat-card-title > div')
-        .textContent
+          .textContent
 
       if (prevQuestion !== question) {
         // todo @ANKU @LOW - так как таймер 2000 результат может не успеть поставится и запускается поврно
@@ -392,26 +392,26 @@ function startExecute(mapResult) {
 
       if (!hasAnyAnswer) {
         const manualAnswers = prompt(
-          'На вопрос:\n' + question
-          + '\nне найден ответы. Выберите сами '
-          + (isMultiple ? 'НЕСКОЛЬКО (через пробел) номеров ответов' : 'ОДИН номер ответ') + ':\n\n'
-          + Object.keys(pageAnswersMap).map((qu, index) => `${index + 1}) ${qu}`).join('\n'),
-          // default
-          isMultiple ? '1 2' : '1',
+            'На вопрос:\n' + question
+            + '\nне найден ответы. Выберите сами '
+            + (isMultiple ? 'НЕСКОЛЬКО (через пробел) номеров ответов' : 'ОДИН номер ответ') + ':\n\n'
+            + Object.keys(pageAnswersMap).map((qu, index) => `${index + 1}) ${qu}`).join('\n'),
+            // default
+            isMultiple ? '1 2' : '1',
         )
 
         if (manualAnswers) {
           manualAnswers
-            .split(' ')
-            .forEach((manualIndexPlus) => {
-              // todo @ANKU @LOW - нужно последовательно через паузу запуска клики
-              Object.keys(pageAnswersMap).forEach((title, index) => {
-                if (index === (manualIndexPlus - 1)) {
-                  pageAnswersMap[title].click()
-                  hasAnyAnswer = true
-                }
+              .split(' ')
+              .forEach((manualIndexPlus) => {
+                // todo @ANKU @LOW - нужно последовательно через паузу запуска клики
+                Object.keys(pageAnswersMap).forEach((title, index) => {
+                  if (index === (manualIndexPlus - 1)) {
+                    pageAnswersMap[title].click()
+                    hasAnyAnswer = true
+                  }
+                })
               })
-            })
         }
       }
 
@@ -478,16 +478,16 @@ function startExecute(mapResult) {
 async function searchByCertName(linkToAnswers = undefined) {
   // pc - mat-card-title - mat-mdc-card-title mat-card-title-quiz-custom
   const titleEl = document.querySelector('mat-panel-title')
-    // mobile - mat-panel-title - mat-expansion-panel-header-title expansion-panel-title ng-tns-c16-8
-    || document.querySelector('mat-card-title')
+      // mobile - mat-panel-title - mat-expansion-panel-header-title expansion-panel-title ng-tns-c16-8
+      || document.querySelector('mat-card-title')
 
   if (titleEl) {
     const certName = titleEl.textContent
-      .trim()
-      .replaceAll(/^( )+/g,'')
-      .replaceAll(/ - Предварительное тестирование$/g,'')
-      // todo
-      .replaceAll(/ - Итоговое тестирование$/g,'')
+        .trim()
+        .replaceAll(/^( )+/g,'')
+        .replaceAll(/ - Предварительное тестирование$/g,'')
+        // todo
+        .replaceAll(/ - Итоговое тестирование$/g,'')
 
     log('Название, ', certName)
     return certName
