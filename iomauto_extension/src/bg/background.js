@@ -116,7 +116,6 @@ chrome.action.onClicked.addListener((tab) => {
     moduleStatus,
     error,
   }) => {
-    console.log('onStart')
     console.log('bg: action: ', moduleStatus, error)
     switch (moduleStatus) {
       case MODULE_STATUS.ERROR:
